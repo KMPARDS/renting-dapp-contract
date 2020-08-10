@@ -1,0 +1,26 @@
+{
+  "name": "renting",
+  "scripts": {
+    "compile": "node compile.js",
+    "deploy": "node deploy.js",
+    "mocha": "mocha -t 30000 -r ts-node/register test/index.ts",
+    "postinstall": "tsc compile.ts",
+    "test": "npm run compile && npm run mocha",
+    "test:debug": "DEBUG=true npm run test",
+    "typechain": "typechain --target ethers-v5 --outDir build/typechain 'build/artifacts/**.json'"
+  },
+  "dependencies": {
+    "@typechain/ethers-v5": "^1.0.0",
+    "@types/fs-extra": "^9.0.1",
+    "@types/mocha": "^8.0.1",
+    "@types/node": "^14.0.27",
+    "ethers": "^5.0.8",
+    "fs-extra": "^9.0.1",
+    "ganache-core": "^2.11.2",
+    "mocha": "^8.1.1",
+    "solc": "^0.7.0",
+    "ts-node": "^8.10.2",
+    "typechain": "^2.0.0",
+    "typescript": "^3.9.7"
+  }
+}
