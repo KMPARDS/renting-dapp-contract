@@ -1,39 +1,48 @@
-// SPDX-License-Identifier: MIT
-
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 contract RentalAgreement 
 {
-    /* This declares a new complex type which will hold the paid rents*/
+    // This declares a new complex type which will hold the paid rents
+    
     struct PaidRent 
     {
-    uint256 id; /* The paid rent id*/
-    uint256 value; /* The amount of rent that is paid*/
+    uint256 id; 
+    uint256 value; 
     }
 
+    // Variables used
+    
     PaidRent[] public paidrents;
 
     uint256 public createdTimestamp;
 
     uint256 public rent;
     
-    /* Combination of description and id of item*/
+    uint256 public security;
+    
     string public item;
 
     address payable public lessor;
 
-    address public lessee;
+    address payable public lessee;
     
-    enum State {Created, Started, Terminated}
+    enum State { Created, Started, Terminated }
+    enum Check { Lessor_Confirmed, Lessee_Confirmed, Return_Lessor_Confirmed, Return_Lessee_Confirmed, Final_Check }
+    
     State public state;
+    Check public check;
 
-    constructor (uint _rent, string memory _item) {
+    // Deployed by Lessor
+    constructor (uint256 _rent, uint256 _security, string memory _item) {
         rent = _rent;
         item = _item;
+        security = _security;
         lessor = msg.sender;
         createdTimestamp = block.timestamp;
     }
+    
+    // Modifiers used
     
     modifier onlyLessor() {
         require (msg.sender == lessor);
@@ -47,9 +56,13 @@ contract RentalAgreement
         require (state == _state);
         _;
     }
+    modifier inCheck(Check _check) {
+        require (check == _check);
+        _;
+    }
 
-    /* Getters so that we can read the values
-    from the blockchain at any time */
+    // Getters for info from blockchain
+    
     function getPaidRents() view public returns (PaidRent[] memory) {
         return paidrents;
     }
@@ -84,46 +97,102 @@ contract RentalAgreement
     }
 
 
-    /* Events for DApps to listen to */
+    // Events for DApps to listen to
+    
     event agreementConfirmed();
-
     event paidRent();
-
     event contractTerminated();
+    event checkedByLessor();
+    event checkedByLessee();
+    event abort();
+    event returnCheckByLessor();
+    event returnCheckByLessee();
+    event finalChecked();
 
-    /* Confirm the lease agreement as lessee*/
-    function confirmAgreement()
-    inState(State.Created) public 
+    // Functions
+    
+    function initialCheckByLessor(bool _condition) onlyLessor inState(State.Created) public
+    {
+        require(_condition==true, "Condition of item is bad -Lessor");
+        emit checkedByLessor();
+        check = Check.Lessor_Confirmed;
+        
+        
+    }
+    
+    function initialCheckByLessee(bool _condition) inCheck(Check.Lessor_Confirmed) public payable
     {
         require(msg.sender != lessor);
-        emit agreementConfirmed();
+        require(_condition==true, "Condition of item is bad -Lessee");
+        emit checkedByLessee();
         lessee = msg.sender;
+        
+        require(msg.value == security);
+        
+        check = Check.Lessee_Confirmed;
+    }
+    
+    function confirmAgreement() inState(State.Created) inCheck(Check.Lessee_Confirmed) public 
+    {
+        require(msg.sender == lessee);
+        emit agreementConfirmed();
+        
         state = State.Started;
     }
 
-    /* Pay the lease as lessee*/
-    function payRent()
-    onlyLessee
-    inState(State.Started) payable public 
+
+    function payRent() onlyLessee inState(State.Started) payable public 
     {
         require(msg.value == rent);
+        
         emit paidRent();
+        
         lessor.transfer(msg.value);
+        
         paidrents.push(PaidRent({
         id : paidrents.length + 1,
-        value : msg.value
+        value : rent
         }));
     }
     
-    /* Terminate the contract so the lessee can’t pay rent anymore,
-    and the contract is terminated */
-    function terminateContract()
-    onlyLessor public 
+    
+    bool byLessor;
+    bool byLessee;
+    
+    function finalCheckByLessor(bool _condition) onlyLessor inState(State.Started) public
+    {
+        byLessor = _condition;
+        
+        //require(_condition==true, "Condition of item returned is damage -Lessor");
+        emit returnCheckByLessor();
+        check = Check.Return_Lessor_Confirmed;
+    }
+    
+    function finalCheckByLessee(bool _condition) onlyLessee inState(State.Started) inCheck(Check.Return_Lessor_Confirmed) public
+    {
+        byLessee = _condition;
+        
+        //require(_condition==true, "Condition of item returned is damage -Lessee");
+        emit returnCheckByLessee();
+        check = Check.Return_Lessee_Confirmed;
+    }
+    
+    function finalCheck() inState(State.Started) inCheck(Check.Return_Lessee_Confirmed) public
+    {
+        require(byLessor==byLessee, "Dispute case: need for Faith Minus");
+        emit finalChecked();
+        check = Check.Final_Check;
+    }
+    
+    
+    function terminateContract() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        lessor.transfer(address(this).balance);
-        /* If there is any value on the
-               contract send it to the lessor*/
+        if(byLessee == false)
+        lessor.transfer(security);
+        else
+        lessee.transfer(security);
+
         state = State.Terminated;
     }
 }
