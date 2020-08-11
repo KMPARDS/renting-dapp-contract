@@ -27,8 +27,8 @@ contract RentalAgreement
 
     address payable public lessee;
     
-    enum State { Created, Started, Terminated }
-    enum Check { Lessor_Confirmed, Lessee_Confirmed, Return_Lessor_Confirmed, Return_Lessee_Confirmed, Final_Check }
+    enum State { Created, Checked, Started, Terminated }
+    enum Check { Lessor_Confirmed, Lessee_Confirmed, Initial_Check, Return_Lessor_Confirmed, Return_Lessee_Confirmed, Final_Check }
     
     State public state;
     Check public check;
@@ -99,6 +99,7 @@ contract RentalAgreement
 
     // Events for DApps to listen to
     
+    event initialChecked();
     event agreementConfirmed();
     event paidRent();
     event contractTerminated();
@@ -111,9 +112,14 @@ contract RentalAgreement
 
     // Functions
     
+    bool checkLessee;
+    bool checkLessor;
+    
     function initialCheckByLessor(bool _condition) onlyLessor inState(State.Created) public
     {
-        require(_condition==true, "Condition of item is bad -Lessor");
+        //require(_condition==true, "Condition of item is bad -Lessor");
+        
+        checkLessor = _condition;
         emit checkedByLessor();
         check = Check.Lessor_Confirmed;
         
@@ -123,20 +129,37 @@ contract RentalAgreement
     function initialCheckByLessee(bool _condition) inCheck(Check.Lessor_Confirmed) public payable
     {
         require(msg.sender != lessor);
-        require(_condition==true, "Condition of item is bad -Lessee");
+        
+        //require(_condition==true, "Condition of item is bad -Lessee");
+        
+        checkLessee = _condition;
         emit checkedByLessee();
         lessee = msg.sender;
         
         require(msg.value == security);
-        
         check = Check.Lessee_Confirmed;
     }
     
-    function confirmAgreement() inState(State.Created) inCheck(Check.Lessee_Confirmed) public 
+    function initialCheck() inState(State.Created) inCheck(Check.Lessee_Confirmed) public payable
+    {
+        if(checkLessee == checkLessor && checkLessee == true)
+        {
+            emit initialChecked();
+            state = State.Checked;
+        }
+        else
+        {
+            lessee.transfer(security);
+            emit abort();
+            state = State.Terminated;
+        }
+    }
+    
+    function confirmAgreement() inState(State.Checked) inCheck(Check.Lessee_Confirmed) public 
     {
         require(msg.sender == lessee);
-        emit agreementConfirmed();
         
+        emit agreementConfirmed();
         state = State.Started;
     }
 
