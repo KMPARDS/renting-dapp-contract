@@ -2,9 +2,12 @@
 
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
+
+import "../contracts/Safemath.sol";
+
 contract RentalAgreement
 {
-    
+    using SafeMath for uint256;
     // This declares a new complex type which will hold the paid rents
     struct PaidRent
     {
@@ -17,6 +20,7 @@ contract RentalAgreement
     uint256 public createdTimestamp;
     uint256 public rent;
     uint256 public security;
+    uint256 public amt;
     string public item;
     address payable public lessor;
     address payable public lessee;
@@ -136,6 +140,7 @@ contract RentalAgreement
         require(msg.value == rent);
         emit paidRent();
         lessor.transfer(msg.value);
+        amt = amt.add(rent);
         paidrents.push(PaidRent({
         id : paidrents.length + 1,
         value : rent
@@ -179,8 +184,9 @@ contract RentalAgreement
         require(byLessee == false, "You must terminate the contract normally");
         require(penalty <= security, "You cannot charge penalty more than security");
         lessor.transfer(penalty);
-        uint256 refund = security-penalty;
+        uint256 refund = security.sub(penalty);
         lessee.transfer(refund);
+        amt = amt.add(penalty);
         state = State.Terminated;
     }
 }
