@@ -56,6 +56,7 @@ contract RentalAgreement
         require (check == _check);
     _;
     }
+    
     // Getters for info from blockchain
     function getPaidRents() view public returns (PaidRent[] memory) {
         return paidrents;
@@ -164,13 +165,27 @@ contract RentalAgreement
         check = Check.Final_Check;
     }
     
-    function terminateContract() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
+    function terminateContractNormally() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        if(byLessee == false)
+        /*if(byLessee == false)
+        {
             lessor.transfer(security);
-        else
-            lessee.transfer(security);
+        }
+        else*/
+        require(byLessee == true, "Please terminate contract using the 'terminateContractWithPenalty' function");
+        lessee.transfer(security);
+        state = State.Terminated;
+    }
+    
+    function terminateContractNormally(uint256 penalty) onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
+    {
+        emit contractTerminated();
+        require(byLessee == false, "You must terminate the contract normally");
+        require(penalty <= security, "You cannot charge penalty more than security");
+        lessor.transfer(penalty);
+        uint256 refund = security-penalty;
+        lessee.transfer(refund);
         state = State.Terminated;
     }
 }
