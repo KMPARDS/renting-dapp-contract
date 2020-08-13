@@ -168,11 +168,6 @@ contract RentalAgreement
     function terminateContractNormally() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        /*if(byLessee == false)
-        {
-            lessor.transfer(security);
-        }
-        else*/
         require(byLessee == true, "Please terminate contract using the 'terminateContractWithPenalty' function");
         lessee.transfer(security);
         state = State.Terminated;
