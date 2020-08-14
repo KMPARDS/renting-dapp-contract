@@ -36,6 +36,9 @@ contract RentalAgreement
     
     // Deployed by Lessor
     constructor (uint256 _rent, uint256 _security, string memory _item) {
+        //uint256 kyc_level = KYCDApp(msg.sender);
+        //require(kyc_level >= 3, "Lessor needs to have minimum KYC level of 3 to proceed ahead");
+
         rent = _rent;
         item = _item;
         security = _security;
