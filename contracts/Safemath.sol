@@ -15,6 +15,7 @@ pragma solidity ^0.7.0;
  * Using this library instead of the unchecked operations eliminates an entire
  * class of bugs, so it's recommended to use it always.
  */
+ 
 library SafeMath {
     /**
      * @dev Returns the addition of two unsigned integers, reverting on
