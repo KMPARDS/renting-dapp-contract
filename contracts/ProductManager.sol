@@ -17,6 +17,10 @@ contract ProductManager
     mapping(address => bool) public isRentValid;
     
     uint256[] public discounts;
+    uint256[] public possibleRents;
+    uint256[] public startingTime;
+    uint256[] public endingTime;
+    uint256[][2] public bookedDates;
     
     string public lessorName;
     string public location;
@@ -25,6 +29,7 @@ contract ProductManager
     uint256 public maxRent;
     uint256 public security;
     uint256 public cancellationFee;
+    uint256 public bookings = 0;
     
     string public description;
     bool public isRented; 
@@ -32,6 +37,8 @@ contract ProductManager
     event NewRentalContract(
         address indexed _deployer, 
         address _contractAddress, 
+        uint256 _start,
+        uint256 _end,
         uint256 _rent, 
         uint256 _security, 
         uint256 _cancellationFee,
@@ -84,7 +91,7 @@ contract ProductManager
         security = _security;
         cancellationFee = _cancellationFee;
         description = _description;
-        isRented = _status;
+        isRented = _status; //can be updated by itself here
         
         isAuthorised[lessorAddress] = true;
     }
@@ -104,22 +111,42 @@ contract ProductManager
             discounts[i] = 0;
         }
     }
+    
      
-    function createAgreement(uint256 _incentive, uint256 _time) public onlyAuthorised returns (address)
+     
+    function createAgreement(uint256 _incentive, uint256 start, uint256 end) public onlyAuthorised returns (address)
     {
         //require(msg.sender != manager, "Only Lessor can create a rental agreement for his listing");
         
         require(isRented == false, "Item currently under rent...not available");
         
-        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, maxRent, security, cancellationFee, _incentive, description, _time, isRented, discounts);
+        bool check = checkAvailability(start, end);
+        
+        require(check == true, "Not available on given range of timings");
+        
+        startingTime.push(start);
+        endingTime.push(end);
+        
+        bookedDates[bookings][0] = start;
+        bookedDates[bookings][1] = end;
+        
+        bookings++;
+        
+        for(uint256 i=0; i < discounts.length; i++)
+        {
+            uint256 val = maxRent.mul(discounts[i]).div(100);
+            possibleRents.push(maxRent.sub(val));
+        }
+        
+        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents);
 
         rents.push(address(_newRentalAgreement));
         isRentValid[address(_newRentalAgreement)] = true;
+        
         isRented = true;
      
-        emit NewRentalContract(lessorAddress, address(_newRentalAgreement), maxRent, security, cancellationFee, _incentive, description);
+        emit NewRentalContract(lessorAddress, address(_newRentalAgreement), start, end, maxRent, security, cancellationFee, _incentive, description);
         
-        return address(_newRentalAgreement); 
     }
      
     function getNumberOfRents() public view returns (uint256) {
@@ -143,5 +170,25 @@ contract ProductManager
     function endAgreement() public onlyRentalContract
     {
         isRented = false;
+    }
+    
+    
+    function checkAvailability(uint256 _from, uint256 _to) view private returns(bool)
+    {
+        for(uint256 i=0; i<bookings; i++)
+        {
+            if(_from >= startingTime[i] && _from <= endingTime[i])
+            return false;
+            
+            if(_to >= startingTime[i] && _to <= endingTime[i])
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function getBookedDates() view public returns(uint256[][2] memory)
+    {
+        return bookedDates;
     }
 }

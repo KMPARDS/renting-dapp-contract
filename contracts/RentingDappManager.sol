@@ -9,14 +9,14 @@ contract RentingDappManager
 {
     using SafeMath for uint256;
     
-    address public manager;
+    address public owner; //owner
     address[] public items;
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isAvailable;
     
-    event Details(uint256 id, address item);
+    event Details(address lessor, address item);
     
-    modifier onlyManager()
+    modifier onlyOwner()
     {
         require(msg.sender == manager, "Only manager can call this");
         _;
@@ -36,7 +36,7 @@ contract RentingDappManager
     
     constructor()
     {
-        manager = msg.sender;
+        owner = msg.sender;
         isAuthorised[msg.sender] = true;
     }
     
@@ -51,13 +51,13 @@ contract RentingDappManager
             _security,
             _cancellationFee,
             _description,
-            false  
+            false  /*can be managed at product manager*/
         );
         
         items.push(address(_newProduct));
         isAvailable[address(_newProduct)] = true;
         
-        emit Details(items.length, address(_newProduct));
+        emit Details(msg.sender, address(_newProduct)); 
     }
     
     function removeItem (address _item) public onlyAuthorised
@@ -65,11 +65,11 @@ contract RentingDappManager
         isAvailable[_item] = false;
     }
     
-    function addLessor(address _lessor) public onlyManager {
+    function addLessor(address _lessor) public onlyOwner {
         isAuthorised[_lessor] = true;
     }
     
-    function removeLessor(address _lessor) public onlyManager {
+    function removeLessor(address _lessor) public onlyOwner {
         isAuthorised[_lessor] = false;
     }
 }

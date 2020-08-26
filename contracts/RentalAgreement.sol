@@ -19,7 +19,6 @@ contract RentalAgreement
     }
     
     // Variables used
-    
     Dayswappers dayswappersContract;
     
     PaidRent[] public paidrents;
@@ -30,7 +29,6 @@ contract RentalAgreement
     uint256 public cancellationFee;
     uint256 public incentive;
     uint256 public amt;
-    uint256 public duration;
     uint256[] public possibleRents;
     
     string public item;
@@ -50,27 +48,24 @@ contract RentalAgreement
     Check public check;
     
     // Deployed by Lessor
-    constructor (address _lessor, uint256 _rent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, uint256 _time, bool _status, uint256[] memory _discounts) {
+    constructor (address _lessor, uint256 _maxrent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, bool _status, uint256[] memory _possibleRents) {
         
         //uint256 kyc_level = KYCDApp(msg.sender);
         //require(kyc_level >= 3, "Lessor needs to have minimum KYC level of 3 to proceed ahead");
         //productManager = msg.sender;
         
-        maxRent = _rent;
+        lessor = payable(_lessor);
+        maxRent = _maxrent;
         item = _item;
         security = _security;
         cancellationFee = _cancellationFee;
         incentive = _incentive;
-        duration = _time;
         status = _status;
         
-        for(uint256 i=0; i < _discounts.length; i++)
+        for(uint256 i=0; i < _possibleRents.length; i++)
         {
-            uint256 val = maxRent.mul(_discounts[i]).div(100);
-            possibleRents.push(maxRent.sub(val));
+            possibleRents[i] = _possibleRents[i];
         }
-        
-        lessor = payable(_lessor);
         
         createdTimestamp = block.timestamp;
         state = State.Created;
@@ -186,7 +181,10 @@ contract RentalAgreement
     
     function payRent() onlyLessee inState(State.Started) payable public
     {
+        //require(msg.value == rent);
+        
         uint256 f=0;
+        
         for(uint256 i=0; i<possibleRents.length; i++)
         {
             if(msg.value == possibleRents[i])
@@ -198,8 +196,9 @@ contract RentalAgreement
         }
         
         require(f == 1, "Rent value doesn't come under available rents");
-        require(msg.value == payingRent);
         
+        //require(msg.value == payingRent);
+
         emit paidRent();
         payable(lessor).transfer(msg.value);
         amt = amt.add(payingRent);
@@ -232,45 +231,57 @@ contract RentalAgreement
         check = Check.Final_Check;
     }
     
-    function terminateContractNormally() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
+    
+    function terminateNormally() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        require(byLessee == true, "Please terminate contract using the 'terminateContractWithPenalty' function");
+        require(byLessee == true, "Please terminate contract using the 'terminatetWithAdditionalCharges' function");
         payable(lessee).transfer(security);
+        
+        /* platform fees = 1% incentive % */
+        
         state = State.Terminated;
+        
+        _payToPlatform();
+        _payIncentive();
     }
     
-    function terminateContractWithPenalty(uint256 penalty) onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
+    function terminateWithAdditionalCharges(uint256 additionalCharges) onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
         require(byLessee == false, "You must terminate the contract normally");
-        require(penalty <= security, "You cannot charge penalty more than security");
-        payable(lessor).transfer(penalty);
-        uint256 refund = security.sub(penalty);
+        require(additionalCharges <= security, "You cannot charge penalty more than security");
+        payable(lessor).transfer(additionalCharges);
+        uint256 refund = security.sub(additionalCharges);
         payable(lessee).transfer(refund);
-        amt = amt.add(penalty);
+        amt = amt.add(additionalCharges);
+        
+        /*platform fees = 1% */
+        
         state = State.Terminated;
+        
+        _payToPlatform();
     }
     
-    /*function payToPlatform() onlyLessor inState(State.Terminated) public
+    function _payToPlatform() onlyLessor inState(State.Terminated) private
     {
         uint256 _txAmount = amt.mul(1).div(100); 
         uint256 _treeAmount = _txAmount.mul(20).div(100); // 20% of txAmount
         uint256 _introducerAmount = _txAmount.mul(20).div(100); // 20% of txAmount
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessee
-        dayswappersContract.payToTree{value: _treeAmount}(lessee, [50, 0, 50]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [50, 0, 50]);
+        dayswappersContract.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessor
-        dayswappersContract.payToTree{value: _treeAmount}(lessor, [50, 0, 50]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [50, 0, 50]);
+        dayswappersContract.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev report volume generated. useful for user to attain a active status.
         dayswappersContract.reportVolume(lessee, _txAmount);
     }
     
-    function payIncentive() onlyLessor inState(State.Terminated) public
+    function _payIncentive() onlyLessor inState(State.Terminated) private
     {
         require(byLessee == true, "In cases of dispute or cancellation of rent incentives cannot be paid");
         
@@ -279,14 +290,14 @@ contract RentalAgreement
         uint256 _introducerAmount = _txAmount.mul(25).div(100); // 25% of txAmount
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessee
-        dayswappersContract.payToTree{value: _treeAmount}(lessee, [50, 0, 50]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [50, 0, 50]);
+        dayswappersContract.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessor
-        dayswappersContract.payToTree{value: _treeAmount}(lessor, [50, 0, 50]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [50, 0, 50]);
+        dayswappersContract.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev report volume generated. useful for user to attain a active status.
         dayswappersContract.reportVolume(lessee, _txAmount);
-    }*/
+    }
 }
