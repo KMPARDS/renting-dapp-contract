@@ -1,5 +1,5 @@
 {
-  "name": "renting",
+  "name": "project-name",
   "scripts": {
     "compile": "node compile.js",
     "deploy": "node deploy.js",
@@ -10,17 +10,19 @@
     "typechain": "typechain --target ethers-v5 --outDir build/typechain 'build/artifacts/**.json'"
   },
   "dependencies": {
+    "solc": "^0.7.0"
+  },
+  "devDependencies": {
     "@typechain/ethers-v5": "^1.0.0",
     "@types/fs-extra": "^9.0.1",
-    "@types/mocha": "^8.0.1",
-    "@types/node": "^14.0.27",
-    "ethers": "^5.0.8",
+    "@types/mocha": "^8.0.3",
+    "@types/node": "^14.6.0",
+    "ethers": "^5.0.9",
     "fs-extra": "^9.0.1",
     "ganache-core": "^2.11.2",
-    "mocha": "^8.1.1",
-    "solc": "^0.7.0",
-    "ts-node": "^8.10.2",
+    "mocha": "^8.1.2",
+    "ts-node": "^9.0.0",
     "typechain": "^2.0.0",
-    "typescript": "^3.9.7"
+    "typescript": "^4.0.2"
   }
 }
