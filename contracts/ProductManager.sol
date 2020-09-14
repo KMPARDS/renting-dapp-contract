@@ -18,9 +18,9 @@ contract ProductManager
     
     uint256[] public discounts;
     uint256[] public possibleRents;
-    uint256[] public startingTime;
-    uint256[] public endingTime;
-    uint256[][2] public bookedDates;
+    uint48[] public startingTime;
+    uint48[] public endingTime;
+    uint48[2][] public bookedDates;
     
     string public lessorName;
     string public location;
@@ -77,7 +77,6 @@ contract ProductManager
     }
      
 
-    
     constructor(string memory _name, string memory _location, address _address, uint256 _id, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description, bool _status)
     {
         manager = msg.sender;
@@ -97,7 +96,6 @@ contract ProductManager
     }
      
 
-
     function addDiscount(uint256 _discount) public onlyAuthorised
     {
         discounts.push(_discount);        
@@ -113,12 +111,11 @@ contract ProductManager
     }
     
      
-     
-    function createAgreement(uint256 _incentive, uint256 start, uint256 end) public onlyAuthorised returns (address)
+    function createAgreement(uint256 _incentive, uint48 start, uint48 end) public onlyAuthorised returns (address)
     {
         //require(msg.sender != manager, "Only Lessor can create a rental agreement for his listing");
         
-        require(isRented == false, "Item currently under rent...not available");
+        //require(isRented == false, "Item currently under rent...not available");
         
         bool check = checkAvailability(start, end);
         
@@ -126,6 +123,8 @@ contract ProductManager
         
         startingTime.push(start);
         endingTime.push(end);
+        
+        bookedDates.push();
         
         bookedDates[bookings][0] = start;
         bookedDates[bookings][1] = end;
@@ -182,12 +181,15 @@ contract ProductManager
             
             if(_to >= startingTime[i] && _to <= endingTime[i])
             return false;
+
+            if(_from <= startingTime[i] && _to >= endingTime[i])
+            return false;
         }
         
         return true;
     }
     
-    function getBookedDates() view public returns(uint256[][2] memory)
+    function getBookedDates() view public returns(uint48[2][] memory)
     {
         return bookedDates;
     }

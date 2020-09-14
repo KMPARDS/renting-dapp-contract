@@ -9,14 +9,15 @@ import './Abstracts/KycDapp.sol';
 contract RentingDappManager  
 {
     using SafeMath for uint256;
-
-    KycDapp public kycContract;
-    address public owner; //owner
+    
+    KycDapp kycContract;
+    
+    address public owner;
     address[] public items;
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isAvailable;
     
-    event Details(address lessor, address item);
+    event ProductDetails(address lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee);
     
     modifier onlyOwner()
     {
@@ -42,10 +43,10 @@ contract RentingDappManager
         isAuthorised[msg.sender] = true;
     }
     
-    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description) public onlyAuthorised
+    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description) public /*onlyAuthorised*/
     {
-        //require(kycContract.isKycLevel3(msg.sender), 'RentingDapp: Require KYC level 3 for listing items');
-
+        //require(kycContract.isKycLevel3(_lessor), 'KYC is not approved');
+        
         ProductManager _newProduct = new ProductManager(
             _name,
             _location,
@@ -61,20 +62,11 @@ contract RentingDappManager
         items.push(address(_newProduct));
         isAvailable[address(_newProduct)] = true;
         
-        emit Details(msg.sender, address(_newProduct)); 
+        emit ProductDetails(msg.sender, address(_newProduct), _name, _description, _location, _maxRent, _security, _cancellationFee); 
     }
     
-    function removeItem (address _item) public onlyAuthorised
+    function removeItem (address _item) public /*onlyAuthorised*/
     {
         isAvailable[_item] = false;
-    }
-    
-    function addLessor(address _lessor) public onlyOwner {
-        require(kycContract.isKycLevel3(msg.sender), 'RentingDapp: Require KYC level 3 for listing items');
-        isAuthorised[_lessor] = true;
-    }
-    
-    function removeLessor(address _lessor) public onlyOwner {
-        isAuthorised[_lessor] = false;
     }
 }

@@ -62,10 +62,7 @@ contract RentalAgreement
         incentive = _incentive;
         status = _status;
         
-        for(uint256 i=0; i < _possibleRents.length; i++)
-        {
-            possibleRents[i] = _possibleRents[i];
-        }
+        possibleRents = _possibleRents;
         
         createdTimestamp = block.timestamp;
         state = State.Created;
