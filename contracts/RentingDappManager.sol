@@ -10,14 +10,14 @@ contract RentingDappManager
 {
     using SafeMath for uint256;
     
-    KycDapp kycContract;
+    //KycDapp kycContract;
     
     address public owner;
     address[] public items;
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isAvailable;
     
-    event ProductDetails(address lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee);
+    event ProductDetails(address indexed lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee);
     
     modifier onlyOwner()
     {
@@ -69,4 +69,6 @@ contract RentingDappManager
     {
         isAvailable[_item] = false;
     }
+    
+
 }

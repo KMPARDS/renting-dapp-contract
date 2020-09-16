@@ -15,7 +15,7 @@ contract ProductManager
      
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isRentValid;
-    
+
     uint256[] public discounts;
     uint256[] public possibleRents;
     uint48[] public startingTime;
@@ -181,7 +181,7 @@ contract ProductManager
             
             if(_to >= startingTime[i] && _to <= endingTime[i])
             return false;
-
+            
             if(_from <= startingTime[i] && _to >= endingTime[i])
             return false;
         }
