@@ -37,10 +37,10 @@ contract RentalAgreement
     address public productManager;
     
     bool status;
-    bool checkLessee;
-    bool checkLessor;
-    bool byLessor;
-    bool byLessee;
+    uint48 checkLessee;
+    uint48 checkLessor;
+    uint48 byLessor;
+    uint48 byLessee;
     
     enum State { Created, Checked, Started, Terminated }
     enum Check { Lessor_Confirmed, Lessee_Confirmed, Initial_Check, Return_Lessor_Confirmed, Return_Lessee_Confirmed, Final_Check }
@@ -48,13 +48,14 @@ contract RentalAgreement
     Check public check;
     
     // Deployed by Lessor
-    constructor (address _lessor, uint256 _maxrent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, bool _status, uint256[] memory _possibleRents) {
+    constructor (address _lessor, address _lessee, uint256 _maxrent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, bool _status, uint256[] memory _possibleRents) {
         
         //uint256 kyc_level = KYCDApp(msg.sender);
         //require(kyc_level >= 3, "Lessor needs to have minimum KYC level of 3 to proceed ahead");
         //productManager = msg.sender;
         
         lessor = payable(_lessor);
+        lessee = payable(_lessee);
         maxRent = _maxrent;
         item = _item;
         security = _security;
@@ -120,7 +121,7 @@ contract RentalAgreement
     event contractTerminated();
     
     // Functions
-    function initialCheckByLessor(bool _condition) inState(State.Created) public
+    function initialCheckByLessor(uint48 _condition) inState(State.Created) public
     {
         //require(_condition==true, "Condition of item is bad -Lessor");
         require(lessor == msg.sender, "Only lessor can call");
@@ -129,7 +130,7 @@ contract RentalAgreement
         check = Check.Lessor_Confirmed;
     }
     
-    function initialCheckByLessee(bool _condition) inCheck(Check.Lessor_Confirmed) public payable
+    function initialCheckByLessee(uint48 _condition) inCheck(Check.Lessor_Confirmed) public payable
     {
         require(msg.sender != lessor);
         //require(_condition==true, "Condition of item is bad -Lessee");
@@ -138,15 +139,19 @@ contract RentalAgreement
         lessee = msg.sender;
         require(msg.value == security);
         check = Check.Lessee_Confirmed;
+        
+        initialCheck();
     }
     
     function initialCheck() inState(State.Created) inCheck(Check.Lessee_Confirmed) public payable
     {
-        if(checkLessee == checkLessor && checkLessee == true)
+        if(checkLessee == checkLessor && checkLessee == 1)
         {
             emit checked(Check.Initial_Check);
             check = Check.Initial_Check;
             state = State.Checked;
+            
+            confirmAgreement();
         }
         else
         {
@@ -205,7 +210,7 @@ contract RentalAgreement
         }));
     }
     
-    function finalCheckByLessor(bool _condition) onlyLessor inState(State.Started) public
+    function finalCheckByLessor(uint48 _condition) onlyLessor inState(State.Started) public
     {
         byLessor = _condition;
         //require(_condition==true, "Condition of item returned is damage -Lessor");
@@ -213,7 +218,7 @@ contract RentalAgreement
         check = Check.Return_Lessor_Confirmed;
     }
     
-    function finalCheckByLessee(bool _condition) onlyLessee inState(State.Started) inCheck(Check.Return_Lessor_Confirmed) public
+    function finalCheckByLessee(uint48 _condition) onlyLessee inState(State.Started) inCheck(Check.Return_Lessor_Confirmed) public
     {
         byLessee = _condition;
         //require(_condition==true, "Condition of item returned is damage -Lessee");
@@ -232,21 +237,21 @@ contract RentalAgreement
     function terminateNormally() onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        require(byLessee == true, "Please terminate contract using the 'terminatetWithAdditionalCharges' function");
+        require(byLessee == 1, "Please terminate contract using the 'terminatetWithAdditionalCharges' function");
         payable(lessee).transfer(security);
         
         /* platform fees = 1% incentive % */
         
         state = State.Terminated;
         
-        _payToPlatform();
-        _payIncentive();
+        //_payToPlatform();
+        //_payIncentive();
     }
     
     function terminateWithAdditionalCharges(uint256 additionalCharges) onlyLessor inState(State.Started) inCheck(Check.Final_Check) public payable
     {
         emit contractTerminated();
-        require(byLessee == false, "You must terminate the contract normally");
+        require(byLessee == 0, "You must terminate the contract normally");
         require(additionalCharges <= security, "You cannot charge penalty more than security");
         payable(lessor).transfer(additionalCharges);
         uint256 refund = security.sub(additionalCharges);
@@ -255,9 +260,9 @@ contract RentalAgreement
         
         /*platform fees = 1% */
         
-        state = State.Terminated;
+        //state = State.Terminated;
         
-        _payToPlatform();
+        //_payToPlatform();
     }
     
     function _payToPlatform() onlyLessor inState(State.Terminated) private
@@ -280,7 +285,7 @@ contract RentalAgreement
     
     function _payIncentive() onlyLessor inState(State.Terminated) private
     {
-        require(byLessee == true, "In cases of dispute or cancellation of rent incentives cannot be paid");
+        require(byLessee == 1, "In cases of dispute or cancellation of rent incentives cannot be paid");
         
         uint256 _txAmount = amt.mul(incentive).div(100);
         uint256 _treeAmount = _txAmount.mul(25).div(100); // 25% of txAmount

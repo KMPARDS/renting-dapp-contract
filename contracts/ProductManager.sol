@@ -35,7 +35,8 @@ contract ProductManager
     bool public isRented; 
      
     event NewRentalContract(
-        address indexed _deployer, 
+        address indexed _lessor,
+        address indexed _lessee,
         address _contractAddress, 
         uint256 _start,
         uint256 _end,
@@ -111,7 +112,7 @@ contract ProductManager
     }
     
      
-    function createAgreement(uint256 _incentive, uint48 start, uint48 end) public onlyAuthorised returns (address)
+    function createAgreement(uint256 _incentive, uint48 start, uint48 end) public /*onlyAuthorised*/ returns (address)
     {
         //require(msg.sender != manager, "Only Lessor can create a rental agreement for his listing");
         
@@ -137,14 +138,14 @@ contract ProductManager
             possibleRents.push(maxRent.sub(val));
         }
         
-        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents);
+        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, msg.sender, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents);
 
         rents.push(address(_newRentalAgreement));
         isRentValid[address(_newRentalAgreement)] = true;
         
         isRented = true;
      
-        emit NewRentalContract(lessorAddress, address(_newRentalAgreement), start, end, maxRent, security, cancellationFee, _incentive, description);
+        emit NewRentalContract(lessorAddress, msg.sender, address(_newRentalAgreement), start, end, maxRent, security, cancellationFee, _incentive, description);
         
     }
      
