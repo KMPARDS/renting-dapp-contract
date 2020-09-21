@@ -6,7 +6,7 @@ import './SafeMath.sol';
 import './ProductManager.sol';
 import './Abstracts/KycDapp.sol';
 
-ccontract RentingDappManager  
+contract RentingDappManager  
 {
     using SafeMath for uint256;
     
@@ -17,7 +17,7 @@ ccontract RentingDappManager
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isAvailable;
     
-    event ProductDetails(address indexed lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee);
+    event ProductDetails(address indexed lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string _categoryId);
     
     modifier onlyOwner()
     {
@@ -43,7 +43,7 @@ ccontract RentingDappManager
         isAuthorised[msg.sender] = true;
     }
     
-    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description) public /*onlyAuthorised*/
+    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description, string memory _categoryId) public /*onlyAuthorised*/
     {
         //require(kycContract.isKycLevel3(_lessor), 'KYC is not approved');
         
@@ -62,7 +62,7 @@ ccontract RentingDappManager
         items.push(address(_newProduct));
         isAvailable[address(_newProduct)] = true;
         
-        emit ProductDetails(msg.sender, address(_newProduct), _name, _description, _location, _maxRent, _security, _cancellationFee); 
+        emit ProductDetails(msg.sender, address(_newProduct), _name, _description, _location, _maxRent, _security, _cancellationFee, _categoryId); 
     }
     
     function removeItem (address _item) public /*onlyAuthorised*/
