@@ -6,7 +6,7 @@ import './SafeMath.sol';
 import './ProductManager.sol';
 import './Abstracts/KycDapp.sol';
 
-contract RentingDappManager  
+ccontract RentingDappManager  
 {
     using SafeMath for uint256;
     

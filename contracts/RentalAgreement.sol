@@ -132,12 +132,12 @@ contract RentalAgreement
     
     function initialCheckByLessee(uint48 _condition) inCheck(Check.Lessor_Confirmed) public payable
     {
-        require(msg.sender != lessor);
+        require(msg.sender != lessor, "Not lessee");
         //require(_condition==true, "Condition of item is bad -Lessee");
         checkLessee = _condition;
         emit checked(Check.Lessee_Confirmed);
         lessee = msg.sender;
-        require(msg.value == security);
+        require(msg.value == security, "Security amount needed");
         check = Check.Lessee_Confirmed;
         
         initialCheck();
@@ -224,9 +224,11 @@ contract RentalAgreement
         //require(_condition==true, "Condition of item returned is damage -Lessee");
         emit checked(Check.Return_Lessee_Confirmed);
         check = Check.Return_Lessee_Confirmed;
+        
+        finalCheck();
     }
     
-    function finalCheck() inState(State.Started) inCheck(Check.Return_Lessee_Confirmed) public
+    function finalCheck() inState(State.Started) inCheck(Check.Return_Lessee_Confirmed) private
     {
         require(byLessor==byLessee, "Dispute case: need for Faith Minus");
         emit checked(Check.Final_Check);

@@ -132,11 +132,16 @@ contract ProductManager
         
         bookings++;
         
+      
+        
         for(uint256 i=0; i < discounts.length; i++)
         {
             uint256 val = maxRent.mul(discounts[i]).div(100);
             possibleRents.push(maxRent.sub(val));
         }
+        
+        if(discounts.length == 0)
+            possibleRents.push(maxRent);
         
         RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, msg.sender, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents);
 
