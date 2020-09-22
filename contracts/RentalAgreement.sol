@@ -5,7 +5,9 @@ pragma experimental ABIEncoderV2;
 
 import './SafeMath.sol';
 import './ProductManager.sol';
+import './RentingDappManager.sol';
 import './Abstracts/Dayswappers.sol';
+import './Abstracts/IKycDapp.sol';
 
 contract RentalAgreement
 {
@@ -19,7 +21,9 @@ contract RentalAgreement
     }
     
     // Variables used
-    Dayswappers dayswappersContract;
+    //Dayswappers public dayswappersContract;
+    
+    RentingDappManager public manager;
     
     PaidRent[] public paidrents;
     uint256 public createdTimestamp;
@@ -48,12 +52,12 @@ contract RentalAgreement
     Check public check;
     
     // Deployed by Lessor
-    constructor (address _lessor, address _lessee, uint256 _maxrent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, bool _status, uint256[] memory _possibleRents) {
+    constructor (address _lessor, address _lessee, uint256 _maxrent, uint256 _security, uint256 _cancellationFee, uint256 _incentive, string memory _item, bool _status, uint256[] memory _possibleRents, address _manager) {
         
         //uint256 kyc_level = KYCDApp(msg.sender);
         //require(kyc_level >= 3, "Lessor needs to have minimum KYC level of 3 to proceed ahead");
         //productManager = msg.sender;
-        
+        manager = RentingDappManager(_manager);
         lessor = payable(_lessor);
         lessee = payable(_lessee);
         maxRent = _maxrent;
@@ -262,31 +266,38 @@ contract RentalAgreement
         
         /*platform fees = 1% */
         
-        //state = State.Terminated;
+        state = State.Terminated;
         
         //_payToPlatform();
+        //_payIncentive();
     }
     
     function _payToPlatform() onlyLessor inState(State.Terminated) private
     {
+        IKycDapp kycDapp = manager.kycContract();
+        Dayswappers daySwappers = Dayswappers(kycDapp.resolveAddress("DAYSWAPPERS"));
+        
         uint256 _txAmount = amt.mul(1).div(100); 
         uint256 _treeAmount = _txAmount.mul(20).div(100); // 20% of txAmount
         uint256 _introducerAmount = _txAmount.mul(20).div(100); // 20% of txAmount
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessee
-        dayswappersContract.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessor
-        dayswappersContract.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev report volume generated. useful for user to attain a active status.
-        dayswappersContract.reportVolume(lessee, _txAmount);
+        daySwappers.reportVolume(lessee, _txAmount);
     }
     
     function _payIncentive() onlyLessor inState(State.Terminated) private
     {
+        IKycDapp kycDapp = manager.kycContract();
+        Dayswappers daySwappers = Dayswappers(kycDapp.resolveAddress("DAYSWAPPERS"));
+        
         require(byLessee == 1, "In cases of dispute or cancellation of rent incentives cannot be paid");
         
         uint256 _txAmount = amt.mul(incentive).div(100);
@@ -294,14 +305,14 @@ contract RentalAgreement
         uint256 _introducerAmount = _txAmount.mul(25).div(100); // 25% of txAmount
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessee
-        dayswappersContract.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToTree{value: _treeAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToIntroducer{value: _introducerAmount}(lessee, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev sending value to a payable function along with giving an argument to the method in regard to lessor
-        dayswappersContract.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
-        dayswappersContract.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToTree{value: _treeAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
+        daySwappers.payToIntroducer{value: _introducerAmount}(lessor, [uint256(50), uint256(0), uint256(50)]);
         
         /// @dev report volume generated. useful for user to attain a active status.
-        dayswappersContract.reportVolume(lessee, _txAmount);
+        daySwappers.reportVolume(lessee, _txAmount);
     }
 }

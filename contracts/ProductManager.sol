@@ -143,7 +143,7 @@ contract ProductManager
         if(discounts.length == 0)
             possibleRents.push(maxRent);
         
-        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, msg.sender, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents);
+        RentalAgreement _newRentalAgreement = new RentalAgreement(lessorAddress, msg.sender, maxRent, security, cancellationFee, _incentive, description, isRented, possibleRents, manager);
 
         rents.push(address(_newRentalAgreement));
         isRentValid[address(_newRentalAgreement)] = true;

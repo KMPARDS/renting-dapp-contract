@@ -4,13 +4,12 @@ pragma solidity ^0.7.0;
 
 import './SafeMath.sol';
 import './ProductManager.sol';
-import './Abstracts/KycDapp.sol';
+import './Abstracts/IKycDapp.sol';
 
 contract RentingDappManager  
 {
-    using SafeMath for uint256;
-    
-    //KycDapp kycContract;
+
+    IKycDapp public kycContract;    
     
     address public owner;
     address[] public items;
@@ -43,9 +42,14 @@ contract RentingDappManager
         isAuthorised[msg.sender] = true;
     }
     
+    function setKycDapp(address kycDapp) public
+    {
+        kycContract = IKycDapp(kycDapp);
+    }
+    
     function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description, string memory _categoryId) public /*onlyAuthorised*/
     {
-        //require(kycContract.isKycLevel3(_lessor), 'KYC is not approved');
+        require(kycContract.isKycApproved(msg.sender, 3, "RENTINGDAPP_MANAGER", "For listing"), 'KYC Level 3 is not approved');
         
         ProductManager _newProduct = new ProductManager(
             _name,
@@ -69,6 +73,4 @@ contract RentingDappManager
     {
         isAvailable[_item] = false;
     }
-    
-
 }
