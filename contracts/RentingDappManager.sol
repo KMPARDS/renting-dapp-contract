@@ -4,19 +4,20 @@ pragma solidity ^0.7.0;
 
 import './SafeMath.sol';
 import './ProductManager.sol';
-import './Abstracts/IKycDapp.sol';
+import './Abstracts/KycDapp.sol';
 
 contract RentingDappManager  
 {
-
-    IKycDapp public kycContract;    
+    using SafeMath for uint256;
+    
+    //KycDapp kycContract;
     
     address public owner;
     address[] public items;
     mapping(address => bool) public isAuthorised;
     mapping(address => bool) public isAvailable;
     
-    event ProductDetails(address indexed lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string _categoryId);
+    event ProductDetails(address indexed lessor, address item, string _name, string _description, string _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, bytes32 indexed _categoryId);
     
     modifier onlyOwner()
     {
@@ -42,14 +43,9 @@ contract RentingDappManager
         isAuthorised[msg.sender] = true;
     }
     
-    function setKycDapp(address kycDapp) public
+    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description, bytes32 _categoryId) public /*onlyAuthorised*/
     {
-        kycContract = IKycDapp(kycDapp);
-    }
-    
-    function addItem (string memory _name, string memory _location, uint256 _maxRent, uint256 _security, uint256 _cancellationFee, string memory _description, string memory _categoryId) public /*onlyAuthorised*/
-    {
-        require(kycContract.isKycApproved(msg.sender, 3, "RENTINGDAPP_MANAGER", "For listing"), 'KYC Level 3 is not approved');
+        //require(kycContract.isKycLevel3(_lessor), 'KYC is not approved');
         
         ProductManager _newProduct = new ProductManager(
             _name,
@@ -73,4 +69,6 @@ contract RentingDappManager
     {
         isAvailable[_item] = false;
     }
+    
+
 }
